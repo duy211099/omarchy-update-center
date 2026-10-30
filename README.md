@@ -1,8 +1,10 @@
 # Update Center
 
-An [Omarchy](https://omarchy.org) bar widget that shows every pending update in one place (system packages, AUR, mise tools, and Omarchy itself) and gently reminds you when you haven't updated in a while.
+An [Omarchy](https://omarchy.org) bar widget that keeps track of **how long it's been since you last updated** and reminds you once you're overdue. It shows every pending update in one place: system packages, AUR, mise tools, and Omarchy itself.
 
-Omarchy's built-in update icon only appears when a new Omarchy release is out. Security fixes for everything else you've installed (your browser, for example) arrive through ordinary package updates that it doesn't mention. Update Center covers all of them and still updates through `omarchy-update`.
+Most update indicators alert you whenever something new appears. Update Center stays quiet until your last full upgrade is older than a week (adjustable) *and* updates are actually waiting, then reminds you once a day until you update. Updating still goes through `omarchy-update`.
+
+![Update Center panel with 7 updates waiting, the System group expanded](preview.png)
 
 ## What it shows
 
