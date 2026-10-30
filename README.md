@@ -6,7 +6,7 @@ Omarchy's built-in update icon only appears when a new Omarchy release is out. S
 
 ## What it shows
 
-- **Bar icon:** always visible. Dim when you're up to date, with a count when updates are waiting, and in the theme's urgent colour once you're overdue.
+- **Bar icon:** always visible. Dim when you're up to date, full brightness with a count when updates are waiting, and in the theme's urgent colour once you're overdue. The count and the urgent colour can each be turned off.
 - **Panel** (left-click):
   - your status, and when you last ran a full system upgrade
   - when the next reminder is due
@@ -31,7 +31,14 @@ To get it back, run `omarchy plugin enable omarchy.system-update`.
 
 ## Settings
 
-Change these in the bar widget's settings (or the plugin's entry in `~/.config/omarchy/shell.json`):
+Omarchy has no settings screen for plugins. Set options with `omarchy bar set`, using `--json` so numbers and true/false aren't saved as text:
+
+```bash
+omarchy bar set liambeck99.update-center reminderDays 5 --json
+omarchy bar set liambeck99.update-center highlightOverdue false --json
+```
+
+They're stored on the widget's entry in `~/.config/omarchy/shell.json`, which you can also edit by hand, e.g. `{"id": "liambeck99.update-center", "reminderDays": 5}`.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -42,6 +49,8 @@ Change these in the bar widget's settings (or the plugin's entry in `~/.config/o
 | `checkAur` | true | Check AUR packages (`yay -Qua`) |
 | `checkMise` | true | Check mise tools (`mise outdated`) |
 | `checkOmarchy` | true | Show a new Omarchy release as its own line |
+| `showCount` | true | Show the number of waiting updates next to the bar icon (off keeps the icon a fixed width) |
+| `highlightOverdue` | true | Colour the bar icon with the theme's urgent colour when overdue (off keeps the bar's normal colour; the panel still says you're overdue) |
 
 ## How it works
 

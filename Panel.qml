@@ -27,6 +27,9 @@ Panel {
   readonly property int checkIntervalHours: Math.max(1, setting("checkIntervalHours", 6))
   readonly property int reminderRepeatHours: Math.max(1, setting("reminderRepeatHours", 24))
   readonly property string skip: Model.skipList(settings)
+  readonly property bool showCount: setting("showCount", true) !== false
+  readonly property bool highlightOverdue: setting("highlightOverdue", true) !== false
+  readonly property bool barCount: showCount && pending > 0
 
   property var status: null
   property bool checking: false
@@ -217,10 +220,10 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.pending > 0 && !vertical ? " " + root.pending : ""
-    slotSize: Style.bar.iconSlot * (root.pending > 0 && !vertical ? (root.pending > 9 ? 2 : 1.6) : 1)
+    text: root.barCount && !vertical ? " " + root.pending : ""
+    slotSize: Style.bar.iconSlot * (root.barCount && !vertical ? (root.pending > 9 ? 2 : 1.6) : 1)
     opacity: root.pending > 0 || root.busy ? 1 : 0.55
-    active: root.overdue
+    active: root.overdue && root.highlightOverdue
     tooltipText: root.opened ? "" : Model.tooltip(root.plan, root.pending, root.busy)
     onPressed: function(b) {
       if (b === Qt.RightButton) root.check()
