@@ -1,0 +1,3 @@
+#!/bin/bash
+# Fake pacman -Qq: only "omarchy" is installed unless STUB_NO_OMARCHY is set.
+[[ -z ${STUB_NO_OMARCHY:-} && ${*: -1} == omarchy ]]

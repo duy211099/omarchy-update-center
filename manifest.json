@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "liambeck99.update-center",
+  "name": "Update Center",
+  "version": "0.1.0",
+  "author": "Liam Beckingham",
+  "license": "MIT",
+  "description": "Every pending update in one bar panel (system packages, AUR, mise, and Omarchy itself), with a gentle reminder once you haven't updated in a while.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Update Center",
+    "description": "Pending system, AUR, mise, and Omarchy updates, when you last updated, and a reminder once you're overdue.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "reminderDays": 7,
+      "checkIntervalHours": 6,
+      "reminderRepeatHours": 24,
+      "checkSystem": true,
+      "checkAur": true,
+      "checkMise": true,
+      "checkOmarchy": true
+    },
+    "schema": [
+      {
+        "key": "reminderDays",
+        "type": "integer",
+        "label": "Remind after (days)",
+        "description": "Send a reminder once your last full system upgrade is this many days old and updates are waiting.",
+        "min": 1,
+        "max": 90,
+        "step": 1,
+        "defaultValue": 7
+      },
+      {
+        "key": "checkIntervalHours",
+        "type": "integer",
+        "label": "Check for updates every (hours)",
+        "description": "How often to look for pending updates in the background. Opening the panel also checks.",
+        "min": 1,
+        "max": 48,
+        "step": 1,
+        "defaultValue": 6
+      },
+      {
+        "key": "reminderRepeatHours",
+        "type": "integer",
+        "label": "Repeat the reminder every (hours)",
+        "description": "While you're overdue, how long to wait before reminding you again.",
+        "min": 1,
+        "max": 168,
+        "step": 1,
+        "defaultValue": 24
+      },
+      {
+        "key": "checkSystem",
+        "type": "boolean",
+        "label": "Check system packages",
+        "description": "Official repository packages, via checkupdates.",
+        "defaultValue": true
+      },
+      {
+        "key": "checkAur",
+        "type": "boolean",
+        "label": "Check AUR packages",
+        "description": "AUR packages, via yay. Hidden when yay isn't installed.",
+        "defaultValue": true
+      },
+      {
+        "key": "checkMise",
+        "type": "boolean",
+        "label": "Check mise tools",
+        "description": "Tools managed by mise. Hidden when mise isn't installed.",
+        "defaultValue": true
+      },
+      {
+        "key": "checkOmarchy",
+        "type": "boolean",
+        "label": "Show Omarchy separately",
+        "description": "List a new Omarchy release as its own line. Needs system packages to be checked.",
+        "defaultValue": true
+      }
+    ]
+  },
+  "homepage": "https://github.com/liambeck99/omarchy-update-center",
+  "repository": "https://github.com/liambeck99/omarchy-update-center"
+}

@@ -1,0 +1,194 @@
+#!/bin/bash
+
+# Collect everything Update Center shows, as one JSON document on stdout.
+#
+#   update-center-status [--skip system,aur,mise,omarchy]   full check (uses the network)
+#   update-center-status busy                                 is an update running right now?
+#
+# Each source reports {enabled, available, ok, error, packages[]}, where a
+# package is {name, from, to}. A source that fails keeps ok=false and its
+# error text; the panel keeps the previous result for it. Nothing here needs
+# root: checkupdates syncs into a temporary database, yay -Qua and mise only
+# read.
+
+set -uo pipefail
+
+PACMAN_LOG=${UPDATE_CENTER_PACMAN_LOG:-/var/log/pacman.log}
+PACMAN_LOCK=${UPDATE_CENTER_PACMAN_LOCK:-/var/lib/pacman/db.lck}
+UPDATE_LOCK=${UPDATE_CENTER_UPDATE_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/omarchy-update.lock}
+CHECK_TIMEOUT=${UPDATE_CENTER_TIMEOUT:-120}
+
+# omarchy-update holds its lock for the whole run (pacman, AUR, mise), and a
+# hand-run pacman holds db.lck. Either one means an update is in progress.
+busy() {
+  [[ -e $PACMAN_LOCK ]] && return 0
+  [[ -e $UPDATE_LOCK ]] && ! flock -n "$UPDATE_LOCK" true 2>/dev/null && return 0
+  return 1
+}
+
+# The last full system upgrade pacman logged, as epoch seconds.
+last_update() {
+  local line stamp
+  [[ -r $PACMAN_LOG ]] || return 0
+  # grep -m1 closes the pipe early, so tac's SIGPIPE status is expected here.
+  line=$(tac "$PACMAN_LOG" | grep -m1 'starting full system upgrade' || true)
+  [[ -n $line ]] || return 0
+  stamp=${line#[}
+  stamp=${stamp%%]*}
+  date -d "$stamp" +%s 2>/dev/null
+}
+
+# "name old -> new" lines, as a JSON array of {name, from, to}.
+arrow_lines_to_json() {
+  jq -R -s -c '
+    split("\n")
+    | map(select(length > 0) | capture("^(?<name>\\S+)\\s+(?<from>\\S+)\\s+->\\s+(?<to>\\S+)"))
+  '
+}
+
+source_json() {
+  # enabled available ok error packages-json
+  jq -n -c --argjson enabled "$1" --argjson available "$2" --argjson ok "$3" \
+    --arg error "$4" --argjson packages "$5" \
+    '{enabled: $enabled, available: $available, ok: $ok, error: $error, packages: $packages}'
+}
+
+first_line() { grep -m1 -v '^\s*$' <<<"$1" | sed 's/^[[:space:]]*//; s/^error: //I' | cut -c1-160; }
+
+check_system() {
+  if ! command -v checkupdates >/dev/null; then
+    source_json true false false "checkupdates not installed (pacman-contrib)" '[]'
+    return
+  fi
+
+  local out err status
+  err=$(mktemp)
+  out=$(timeout "$CHECK_TIMEOUT" checkupdates --nocolor 2>"$err")
+  status=$?
+
+  # checkupdates: 0 = updates listed, 2 = none, anything else = failure.
+  case $status in
+    0 | 2) source_json true true true "" "$(arrow_lines_to_json <<<"$out")" ;;
+    124) source_json true true false "Timed out checking system packages" '[]' ;;
+    *) source_json true true false "$(first_line "$(cat "$err")" || true)" '[]' ;;
+  esac
+  rm -f "$err"
+}
+
+check_aur() {
+  if ! command -v yay >/dev/null; then
+    source_json true false true "" '[]'
+    return
+  fi
+
+  local out err status message
+  err=$(mktemp)
+  out=$(timeout "$CHECK_TIMEOUT" yay -Qua --color never 2>"$err")
+  status=$?
+  message=$(grep -m1 -iE 'error|fail|could not|unable' "$err")
+
+  # yay -Qua exits 1 when there is simply nothing to upgrade, so only stderr
+  # tells a failure apart from "up to date".
+  if ((status == 124)); then
+    source_json true true false "Timed out checking the AUR" '[]'
+  elif [[ -n $message ]]; then
+    source_json true true false "$(first_line "$message")" '[]'
+  else
+    source_json true true true "" "$(arrow_lines_to_json <<<"$out")"
+  fi
+  rm -f "$err"
+}
+
+check_mise() {
+  if ! command -v mise >/dev/null; then
+    source_json true false true "" '[]'
+    return
+  fi
+
+  local out err status packages
+  err=$(mktemp)
+  # Same cooldown override as omarchy-update-mise, so the count matches what
+  # an update would actually install.
+  out=$(MISE_MINIMUM_RELEASE_AGE=0 timeout "$CHECK_TIMEOUT" mise outdated --json 2>"$err")
+  status=$?
+
+  if ((status == 124)); then
+    source_json true true false "Timed out checking mise tools" '[]'
+  elif ((status != 0)) || ! packages=$(jq -c '
+      to_entries | map({name: .key, from: (.value.current // ""), to: (.value.latest // "")})
+    ' <<<"${out:-{\}}" 2>/dev/null); then
+    source_json true true false "$(first_line "$(cat "$err")" || echo "mise outdated failed")" '[]'
+  else
+    source_json true true true "" "$packages"
+  fi
+  rm -f "$err"
+}
+
+disabled_json() { source_json false false true "" '[]'; }
+
+full_check() {
+  local skip=",$1,"
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+
+  # The checks are independent network round-trips; run them side by side.
+  for source in system aur mise; do
+    if [[ $skip == *",$source,"* ]]; then
+      disabled_json >"$tmp/$source" &
+    else
+      "check_$source" >"$tmp/$source" &
+    fi
+  done
+  wait
+
+  # Omarchy ships as the omarchy (or omarchy-dev) pacman package, so its update
+  # comes from the system check; it is split out rather than counted twice.
+  local omarchy_enabled=true
+  [[ $skip == *",omarchy,"* ]] && omarchy_enabled=false
+
+  jq -n -c \
+    --argjson checkedAt "$(date +%s)" \
+    --arg lastUpdate "$(last_update)" \
+    --argjson busy "$(busy && echo true || echo false)" \
+    --argjson omarchyEnabled "$omarchy_enabled" \
+    --argjson omarchyInstalled "$({ pacman -Qq omarchy || pacman -Qq omarchy-dev; } >/dev/null 2>&1 && echo true || echo false)" \
+    --slurpfile system "$tmp/system" \
+    --slurpfile aur "$tmp/aur" \
+    --slurpfile mise "$tmp/mise" '
+    def is_omarchy: .name == "omarchy" or .name == "omarchy-dev";
+    ($system[0]) as $sys
+    | {
+        checkedAt: $checkedAt,
+        lastUpdate: (if $lastUpdate == "" then null else ($lastUpdate | tonumber) end),
+        busy: $busy,
+        sources: {
+          system: ($sys | .packages |= map(select(is_omarchy | not))),
+          aur: $aur[0],
+          mise: $mise[0],
+          omarchy: {
+            enabled: $omarchyEnabled,
+            available: ($omarchyInstalled and $sys.enabled),
+            ok: $sys.ok,
+            error: $sys.error,
+            packages: (if $omarchyEnabled then ($sys.packages | map(select(is_omarchy))) else [] end)
+          }
+        }
+      }
+  '
+}
+
+case "${1:-}" in
+  busy)
+    busy && echo '{"busy":true}' || echo '{"busy":false}'
+    ;;
+  --skip)
+    full_check "${2:-}"
+    ;;
+  "")
+    full_check ""
+    ;;
+  *)
+    echo "Usage: update-center-status [--skip system,aur,mise,omarchy] | busy" >&2
+    exit 2
+    ;;
+esac

@@ -1,0 +1,5 @@
+#!/bin/bash
+# Fake yay -Qua: STUB_YAY_OUT, STUB_YAY_ERR, STUB_YAY_EXIT (real yay exits 1 when nothing is outdated)
+printf '%b' "${STUB_YAY_OUT:-}"
+[[ -n ${STUB_YAY_ERR:-} ]] && echo "$STUB_YAY_ERR" >&2
+exit "${STUB_YAY_EXIT:-1}"

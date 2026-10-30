@@ -1,0 +1,5 @@
+#!/bin/bash
+# Fake checkupdates: STUB_CHECKUPDATES_EXIT, STUB_CHECKUPDATES_OUT
+printf '%b' "${STUB_CHECKUPDATES_OUT:-}"
+[[ -n ${STUB_CHECKUPDATES_ERR:-} ]] && echo "$STUB_CHECKUPDATES_ERR" >&2
+exit "${STUB_CHECKUPDATES_EXIT:-2}"

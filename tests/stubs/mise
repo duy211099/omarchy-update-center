@@ -1,0 +1,4 @@
+#!/bin/bash
+# Fake mise outdated --json: STUB_MISE_OUT, STUB_MISE_EXIT
+printf '%s' "${STUB_MISE_OUT:-{\}}"
+exit "${STUB_MISE_EXIT:-0}"
