@@ -113,3 +113,22 @@ describe("wording", () => {
     expect(Model.headline(plan("overdue", 3 * DAY), 4)).toBe("Overdue by 3 days")
   })
 })
+
+describe("reminderRow", () => {
+  const base = new Date(2026, 9, 30, 12, 0).getTime() / 1000
+  const row = (lastUpdate, pending, lastReminder = null) =>
+    Model.reminderRow(base, Model.reminderPlan(base, lastUpdate, lastReminder, pending, 7, 24))
+
+  test("scheduled reminder", () => {
+    expect(row(base - 3 * DAY, 2)).toEqual({ label: "Next reminder", value: "Tue 3 Nov 12:00" })
+  })
+  test("up to date and not yet due says when reminders could start", () => {
+    expect(row(base - 6 * DAY, 0)).toEqual({ label: "Reminders from", value: "tomorrow 12:00" })
+  })
+  test("up to date past the due date needs no reminder", () => {
+    expect(row(base - 9 * DAY, 0).value).toBe("none, nothing waiting")
+  })
+  test("unknown last update", () => {
+    expect(row(null, 2).value).toBe("off, last update unknown")
+  })
+})

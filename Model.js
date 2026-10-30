@@ -163,12 +163,13 @@ function headline(plan, pending) {
   return "Up to date"
 }
 
-function reminderLine(now, plan) {
-  if (plan.nextReminderAt !== null) return "Next reminder " + when(now, plan.nextReminderAt)
+// The panel's reminder row as {label, value}; short enough for one line.
+function reminderRow(now, plan) {
+  if (plan.nextReminderAt !== null) return { label: "Next reminder", value: when(now, plan.nextReminderAt) }
   if (plan.state === "current" && plan.dueAt !== null && now < plan.dueAt)
-    return "Reminders start " + when(now, plan.dueAt) + " if updates are waiting"
-  if (plan.state === "current") return "No reminder while nothing is waiting"
-  return "Reminders need a known last update"
+    return { label: "Reminders from", value: when(now, plan.dueAt) }
+  if (plan.state === "current") return { label: "Reminder", value: "none, nothing waiting" }
+  return { label: "Reminder", value: "off, last update unknown" }
 }
 
 function notificationBody(now, lastUpdate, pending) {
@@ -184,7 +185,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     SOURCES: SOURCES, parseStatus: parseStatus, mergeStatus: mergeStatus, groups: groups,
     pendingCount: pendingCount, hasErrors: hasErrors, skipList: skipList, reminderPlan: reminderPlan,
-    duration: duration, ago: ago, when: when, headline: headline, reminderLine: reminderLine,
+    duration: duration, ago: ago, when: when, headline: headline, reminderRow: reminderRow,
     notificationBody: notificationBody, tooltip: tooltip
   }
 }

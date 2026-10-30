@@ -328,8 +328,9 @@ Panel {
 
           InfoPair { label: "Last updated"; value: Model.ago(root.now, root.lastUpdate) }
           InfoPair {
-            label: "Reminder"
-            value: Model.reminderLine(root.now, root.plan)
+            readonly property var row: Model.reminderRow(root.now, root.plan)
+            label: row.label
+            value: row.value
           }
         }
 
@@ -406,11 +407,11 @@ Panel {
                   Text {
                     width: parent.width - chevron.width - groupLabel.implicitWidth - parent.spacing * 2
                     horizontalAlignment: Text.AlignRight
-                    elide: Text.ElideLeft
+                    elide: Text.ElideRight
                     textFormat: Text.PlainText
                     text: {
                       var g = group.modelData
-                      if (!g.ok) return (g.packages.length > 0 ? g.packages.length + " · " : "") + "Couldn't check: " + g.error
+                      if (!g.ok) return (g.packages.length > 0 ? g.packages.length + " · " : "") + "couldn't check"
                       return g.packages.length > 0 ? String(g.packages.length) : "up to date"
                     }
                     color: !group.modelData.ok ? root.urgent : (group.canExpand ? root.foreground : root.muted)
@@ -426,6 +427,23 @@ Panel {
                   cursorShape: group.canExpand ? Qt.PointingHandCursor : Qt.ArrowCursor
                   onClicked: if (group.canExpand) root.toggleGroup(group.modelData.key)
                 }
+              }
+
+              // The reason a source couldn't be checked, in full.
+              Text {
+                visible: !group.modelData.ok && group.modelData.error !== ""
+                width: parent.width
+                leftPadding: Style.space(22)
+                rightPadding: Style.space(4)
+                wrapMode: Text.Wrap
+                maximumLineCount: 3
+                elide: Text.ElideRight
+                textFormat: Text.PlainText
+                text: group.modelData.error
+                color: root.urgent
+                opacity: 0.85
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
               }
 
               Repeater {
