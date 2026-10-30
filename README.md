@@ -15,6 +15,15 @@ Omarchy's built-in update icon only appears when a new Omarchy release is out. S
 - **Right-click:** check now.
 - **Reminder:** a notification once your last full upgrade is older than 7 days *and* updates are waiting. It repeats daily until you update, and clicking it starts the update. Nothing is waiting? No reminder.
 
+## Requirements
+
+- **Omarchy** with the Quickshell shell (Omarchy 4 / Quattro). The plugin uses `omarchy-update`, `omarchy-notification-send` and `omarchy-launch-floating-terminal-with-presentation`.
+- **`pacman-contrib`** for `checkupdates`, which checks system packages. Omarchy installs it by default.
+- **`jq`** and **`util-linux`** (`flock`), both installed on Omarchy by default.
+- Optional: **`yay`** to check AUR packages, and **`mise`** to check mise tools. If either is missing, its group is hidden.
+
+It needs no root, installs no hooks or services, and never changes your configuration. The only file it writes is `~/.local/state/liambeck99.update-center/state.json`, which records when you were last reminded.
+
 ## Install
 
 ```bash
@@ -28,6 +37,20 @@ omarchy plugin disable omarchy.system-update
 ```
 
 To get it back, run `omarchy plugin enable omarchy.system-update`.
+
+## Update
+
+```bash
+omarchy plugin update liambeck99.update-center
+```
+
+## Uninstall
+
+```bash
+omarchy plugin remove liambeck99.update-center
+rm -rf ~/.local/state/liambeck99.update-center   # optional: forget when you were last reminded
+omarchy plugin enable omarchy.system-update      # optional: bring back Omarchy's own update icon
+```
 
 ## Settings
 
@@ -74,6 +97,8 @@ omarchy-shell liambeck99.update-center toggle    # open/close the panel
 ```
 
 ## Development
+
+Tests need [Bun](https://bun.sh) (development only, not needed to use the plugin).
 
 ```bash
 bun test                       # logic and status-script tests (stubbed tools, no network)
